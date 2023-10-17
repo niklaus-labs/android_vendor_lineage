@@ -32,6 +32,10 @@ ifneq ($(TARGET_BOOTANIMATION),)
 $(call soong_config_set,lineage_bootanimation,prebuilt_file,$(TARGET_BOOTANIMATION))
 endif
 
+# Camera
+ifneq ($(TARGET_CAMERA_PACKAGE_NAME),)
+    $(call soong_config_set,camera,package_name,$(TARGET_CAMERA_PACKAGE_NAME))
+endif
 # Charger
 lineage_charger_density := mdpi
 ifneq (,$(TARGET_SCREEN_DENSITY))

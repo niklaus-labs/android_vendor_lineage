@@ -49,6 +49,26 @@ if not depsonly:
     )
 
 repositories = []
+axion_repos = []
+lineage_repos = []
+
+page = 1
+while True:
+    githubreq = urllib.request.Request("https://api.github.com/orgs/AxionAOSP-devices/repos?per_page=100&page=%d" % page)
+    try:
+        result = json.loads(urllib.request.urlopen(githubreq, timeout=10).read().decode())
+    except urllib.error.URLError:
+        print("Failed to fetch data from AxionAOSP-devices GitHub")
+        result = []
+    except ValueError:
+        print("Failed to parse return data from AxionAOSP-devices GitHub")
+        result = []
+    
+    if not result:
+        break
+    for res in result:
+        axion_repos.append(res['name'])
+    page += 1
 
 if not depsonly:
     githubreq = urllib.request.Request(
@@ -59,13 +79,17 @@ if not depsonly:
             urllib.request.urlopen(githubreq, timeout=10).read().decode()
         )
     except urllib.error.URLError:
-        print('Failed to fetch data from GitHub')
+        print('Failed to fetch data from LineageOS GitHub')
         sys.exit(1)
     except ValueError:
-        print('Failed to parse return data from GitHub')
+        print('Failed to parse return data from LineageOS GitHub')
         sys.exit(1)
     for res in result.findall('.//project'):
-        repositories.append(res.attrib['name'][10:])
+        repo_name = res.attrib['name'][10:]
+        lineage_repos.append(repo_name)
+        repositories.append(repo_name)
+
+    repositories.sort()
 
 local_manifests = r'.repo/local_manifests'
 if not os.path.exists(local_manifests):
@@ -209,9 +233,10 @@ def add_to_manifest(dependencies):
             repo_name = dependency['repository']
             repo_target = dependency['target_path']
             repo_revision = dependency['branch']
+            repo_org = dependency.get('org', 'LineageOS')
             print(f'Checking if {repo_target} is fetched from {repo_name}')
             if is_in_manifest('project', 'path', repo_target):
-                print(f'LineageOS/{repo_name} already fetched to {repo_target}')
+                print(f'{repo_org}/{repo_name} already fetched to {repo_target}')
                 continue
 
             project = ElementTree.Element(
@@ -219,7 +244,7 @@ def add_to_manifest(dependencies):
                 attrib={
                     'path': repo_target,
                     'remote': 'github',
-                    'name': f'LineageOS/{repo_name}',
+                    'name': f'{repo_org}/{repo_name}',
                     'revision': repo_revision,
                 },
             )
@@ -290,6 +315,12 @@ def fetch_dependencies(repo_path):
                                 sys.exit(1)
                         else:
                             dependency['branch'] = None
+
+                    if dependency.get('remote', 'github') == 'github':
+                        if dependency['repository'] in axion_repos:
+                            dependency['org'] = 'AxionAOSP-devices'
+                        else:
+                            dependency['org'] = 'LineageOS'
                 verify_repos.append(dependency['target_path'])
 
                 if not os.path.isdir(dependency['target_path']):
@@ -318,19 +349,33 @@ def get_default_or_fallback_revision(repo_name):
     print(f'Default revision: {default_revision}')
     print('Checking branch info')
 
-    try:
-        stdout = subprocess.run(
-            [
-                'git',
-                'ls-remote',
-                '-h',
-                'https://:@github.com/LineageOS/' + repo_name,
-            ],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        ).stdout.decode()
-        branches = [x.split('refs/heads/')[-1] for x in stdout.splitlines()]
-    except Exception:
+    orgs = ['AxionAOSP-devices', 'LineageOS']
+    if repo_name in axion_repos:
+        orgs = ['AxionAOSP-devices']
+    elif repo_name in lineage_repos:
+        orgs = ['LineageOS']
+
+    branches = []
+
+    for org in orgs:
+        try:
+            stdout = subprocess.run(
+                [
+                    'git',
+                    'ls-remote',
+                    '-h',
+                    f'https://:@github.com/{org}/{repo_name}',
+                ],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            ).stdout.decode()
+            branches = [x.split('refs/heads/')[-1] for x in stdout.splitlines()]
+            if branches:
+                break
+        except Exception:
+            pass
+
+    if not branches:
         return ''
 
     if default_revision in branches:
@@ -388,6 +433,11 @@ else:
                 'target_path': repo_path,
                 'branch': revision,
             }
+
+            if repo_name in axion_repos:
+                device_repository['org'] = 'AxionAOSP-devices'
+            else:
+                device_repository['org'] = 'LineageOS'
             add_to_manifest([device_repository])
 
             print('Syncing repository to retrieve project.')

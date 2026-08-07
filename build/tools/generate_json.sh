@@ -15,10 +15,10 @@ PRODUCT_OUT=$2
 LINEAGE_ZIP=$3
 FILENAME="axion-$LINEAGE_ZIP"
 
-if [[ "$FILENAME" =~ ^axion-([0-9]+(\.[0-9]+)*)-([[:alnum:]_]+)-[0-9]+-(COMMUNITY|OFFICIAL|UNOFFICIAL)-(GMS|PICO|CORE|VANILLA)-.+\.zip$ ]]; then
+if [[ "$FILENAME" =~ ^axion-([0-9]+(\.[0-9]+)*)-([[:alnum:]_]+)-[0-9]+-(GMS|PICO|CORE|VANILLA)-.+\.zip$ ]]; then
     VERSION="${BASH_REMATCH[1]}"
-    ROMTYPE="${BASH_REMATCH[4]}"
-    BUILD_FLAVOR="${BASH_REMATCH[5]}"
+    BUILD_FLAVOR="${BASH_REMATCH[4]}"
+    ROMTYPE="UNOFFICIAL"
 else
     echo "Error: Unable to parse filename: $FILENAME"
     exit 1

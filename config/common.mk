@@ -1,6 +1,5 @@
 -include vendor/lineage-priv/flag_overrides/flags.mk
 # Allow vendor/extra to override any property by setting it first
-$(call inherit-product, vendor/lineage/config/defaults_common.mk)
 $(call inherit-product-if-exists, vendor/extra/product.mk)
 $(call inherit-product-if-exists, vendor/addons/config.mk)
 include vendor/lineage/audio/config.mk
@@ -304,6 +303,7 @@ PRODUCT_EXTRA_RECOVERY_KEYS += \
     vendor/lineage/build/target/product/security/lineage
 
 include vendor/lineage/config/version.mk
+$(call inherit-product, vendor/lineage/config/defaults_common.mk)
 
 -include vendor/lineage-priv/keys/keys.mk
 
